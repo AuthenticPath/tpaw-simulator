@@ -89,10 +89,16 @@
           <input type="number" id="n-sims" value="1000" step="100" />
 
           <!-- UPDATED: Max Spending Cap -->
-          <label for="max-total-spending"
-            >Max Annual Total Spending (optional, real $ at year 0):</label
+          <label for="max-total-spending-value"
+            >Max Total Spending (optional, real $ at year 0):</label
           >
-          <input type="number" id="max-total-spending" />
+          <div class="input-group-spending-cap">
+            <input type="number" id="max-total-spending-value" />
+            <select id="max-total-spending-period">
+              <option value="annual" selected>per Year</option>
+              <option value="monthly">per Month</option>
+            </select>
+          </div>
         </section>
 
         <button id="run-sim">Run Simulation</button>

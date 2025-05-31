@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- DOM Elements ---
   const inputs = {
     userBirthdate: document.getElementById("user-birthdate"),
-    expectedInflation: document.getElementById("expected-inflation"), // NEW
+    expectedInflation: document.getElementById("expected-inflation"),
     lmpAmount: document.getElementById("lmp-amount"),
     lmpRate: document.getElementById("lmp-rate"),
     lmpYears: document.getElementById("lmp-years"),
@@ -16,22 +16,25 @@ document.addEventListener("DOMContentLoaded", () => {
     bondSigma: document.getElementById("bond-sigma"),
     legacyTarget: document.getElementById("legacy-target"),
     nSims: document.getElementById("n-sims"),
-    maxTotalSpending: document.getElementById("max-total-spending"), // UPDATED ID
+    maxTotalSpendingValue: document.getElementById("max-total-spending-value"),
+    maxTotalSpendingPeriod: document.getElementById(
+      "max-total-spending-period"
+    ),
     showSources: document.getElementById("show-sources"),
     displayMonthly: document.getElementById("display-monthly"),
-    displayNominal: document.getElementById("display-nominal"), // NEW
+    displayNominal: document.getElementById("display-nominal"),
   };
 
   const outputs = {
     legacy95th: document.getElementById("legacy-95th"),
     legacy50th: document.getElementById("legacy-50th"),
     legacy5th: document.getElementById("legacy-5th"),
-    legacyBoxNote: document.getElementById("legacy-box-note"), // NEW
+    legacyBoxNote: document.getElementById("legacy-box-note"),
     summaryLmpCost: document.getElementById("summary-lmp-cost"),
     summaryRiskStart: document.getElementById("summary-risk-start"),
     summaryW0: document.getElementById("summary-w0"),
     chartMainTitle: document.getElementById("chart-main-title"),
-    chartSubtitle: document.getElementById("chart-subtitle"), // For subtitle update
+    chartSubtitle: document.getElementById("chart-subtitle"),
   };
 
   const runSimButton = document.getElementById("run-sim");
@@ -43,10 +46,17 @@ document.addEventListener("DOMContentLoaded", () => {
   let rawResultsByYear = []; // Store raw real results for toggling nominal display
 
   // --- Helper Functions ---
-  const parseFloatInput = (element, defaultValue = 0) =>
-    parseFloat(element.value) || defaultValue;
-  const parseIntInput = (element, defaultValue = 0) =>
-    parseInt(element.value) || defaultValue;
+  const parseFloatInput = (element, defaultValue = 0) => {
+    const value = element ? element.value : ""; // Check if element exists
+    // Try to parse, if NaN or empty after parseFloat, use defaultValue
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? defaultValue : parsed;
+  };
+  const parseIntInput = (element, defaultValue = 0) => {
+    const value = element ? element.value : ""; // Check if element exists
+    const parsed = parseInt(value, 10); // Always specify radix 10 for parseInt
+    return isNaN(parsed) ? defaultValue : parsed;
+  };
 
   function randomNormal() {
     let u = 0,
@@ -60,29 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return mean + stdDev * randomNormal();
   }
 
-  function formatCurrency(
-    value,
-    displayNominal = false,
-    settings = null,
-    yearIndex = 0
-  ) {
-    let finalValue = value;
-    if (displayNominal && settings) {
-      const cumulativeInflation = Math.pow(
-        1 + settings.expectedInflation / 100,
-        yearIndex
-      );
-      finalValue *= cumulativeInflation;
-    }
-    return finalValue.toLocaleString("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  }
-
-  // Overloaded formatCurrency for single values (legacy, summary)
   function formatSimpleCurrency(value) {
     return value.toLocaleString("en-US", {
       style: "currency",
@@ -101,13 +88,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Amortization Logic --- (remains real)
   function calcWithdrawal(balance, rate, years, legacyTarget) {
     if (years <= 0) return 0;
-    if (balance <= 0 && legacyTarget <= 0) return 0; // Cannot withdraw if balance and legacy are zero or less
-    if (balance <= 0 && legacyTarget > 0) return 0; // Cannot meet positive legacy with no balance
+    if (balance <= 0 && legacyTarget <= 0) return 0;
+    if (balance <= 0 && legacyTarget > 0) return 0;
 
     const adjustedBalanceForWithdrawal =
       balance - legacyTarget / Math.pow(1 + rate, years);
 
-    if (adjustedBalanceForWithdrawal <= 0) return 0; // No surplus to withdraw
+    if (adjustedBalanceForWithdrawal <= 0) return 0;
 
     if (rate === 0) {
       return adjustedBalanceForWithdrawal / years;
@@ -122,10 +109,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- Monte Carlo Simulation ---
   function runMonteCarlo(settings) {
-    // All core calculations are in REAL terms. Inflation applied for capping IF nominal display is on, and for final display.
     const resultsByYear = Array(settings.horizonYears)
       .fill(null)
-      .map(() => []); // Stores REAL spending components
+      .map(() => []);
     const legacyOutcomesReal = [];
     allSimData = [];
 
@@ -157,6 +143,17 @@ document.addEventListener("DOMContentLoaded", () => {
     outputs.summaryRiskStart.textContent = formatSimpleCurrency(riskStart);
     outputs.summaryW0.textContent = formatSimpleCurrency(W0_real);
 
+    let effectiveAnnualRealCap = null;
+    if (
+      settings.maxTotalSpendingValue !== null &&
+      settings.maxTotalSpendingValue > 0
+    ) {
+      effectiveAnnualRealCap = settings.maxTotalSpendingValue;
+      if (settings.maxTotalSpendingPeriod === "monthly") {
+        effectiveAnnualRealCap *= 12;
+      }
+    }
+
     for (let i = 0; i < settings.nSims; i++) {
       let currentBalanceReal = riskStart;
       let Wt_minus_1_real = W0_real;
@@ -175,24 +172,18 @@ document.addEventListener("DOMContentLoaded", () => {
         uncappedRiskWithdrawalReal = Math.min(
           uncappedRiskWithdrawalReal,
           Math.max(0, currentBalanceReal)
-        ); // Cannot withdraw more than available balance
+        );
 
         const lmpContributionReal =
           t < settings.lmpYears ? settings.lmpAmount : 0;
-        let actualRiskWithdrawalReal = uncappedRiskWithdrawalReal; // Assume no cap initially
+        let actualRiskWithdrawalReal = uncappedRiskWithdrawalReal;
 
-        // Apply Max Total Spending Cap
-        if (
-          settings.maxTotalSpending !== null &&
-          settings.maxTotalSpending > 0
-        ) {
+        if (effectiveAnnualRealCap !== null) {
           const totalUncappedRealSpending =
             lmpContributionReal + uncappedRiskWithdrawalReal;
-          let effectiveRealCap = settings.maxTotalSpending; // User inputs cap in real year 0 dollars
-
-          if (totalUncappedRealSpending > effectiveRealCap) {
+          if (totalUncappedRealSpending > effectiveAnnualRealCap) {
             const preventativeSavingsReal =
-              totalUncappedRealSpending - effectiveRealCap;
+              totalUncappedRealSpending - effectiveAnnualRealCap;
             actualRiskWithdrawalReal = Math.max(
               0,
               uncappedRiskWithdrawalReal - preventativeSavingsReal
@@ -202,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
         actualRiskWithdrawalReal = Math.max(
           0,
           Math.min(actualRiskWithdrawalReal, currentBalanceReal)
-        ); // Final check
+        );
 
         let balanceAfterWithdrawalReal =
           currentBalanceReal - actualRiskWithdrawalReal;
@@ -232,14 +223,12 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         Wt_next_real = Math.max(0, Wt_next_real);
 
-        // Store REAL components
         resultsByYear[t].push({
           lmpComponentReal: lmpContributionReal,
           riskComponentReal: actualRiskWithdrawalReal,
         });
 
         simPath.push({
-          // Store real values for CSV, convert if needed during export
           year: t + 1,
           sim: i + 1,
           startBalanceReal: t === 0 ? riskStart : simPath[t - 1].endBalanceReal,
@@ -247,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
           riskWithdrawalReal: actualRiskWithdrawalReal,
           totalSpendingReal: lmpContributionReal + actualRiskWithdrawalReal,
           endBalanceReal: currentBalanceReal,
-          cumulativeInflation: cumulativeInflationFactor, // For potential nominal export
+          cumulativeInflation: cumulativeInflationFactor,
         });
 
         Wt_minus_1_real = Wt_next_real;
@@ -255,11 +244,11 @@ document.addEventListener("DOMContentLoaded", () => {
       legacyOutcomesReal.push(currentBalanceReal);
       allSimData.push(...simPath);
     }
-    rawResultsByYear = resultsByYear; // Save raw real results
-    return { resultsByYear, legacyOutcomesReal }; // Return REAL values
+    rawResultsByYear = resultsByYear;
+    return { resultsByYear, legacyOutcomesReal };
   }
 
-  // --- Aggregation & Percentiles --- (operates on whatever data is passed - real or nominal)
+  // --- Aggregation & Percentiles ---
   function calculatePercentiles(data, percentiles = [0.05, 0.5, 0.95]) {
     if (!data || data.length === 0) {
       const emptyResult = {};
@@ -288,6 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
       spendingChart.destroy();
     }
 
+    // ... (initial variable declarations: displayMonthly, displayNominal, etc. - NO CHANGE) ...
     const displayMonthly = settings.displayMonthly;
     const displayNominal = settings.displayNominal;
     const expectedInflationRate = settings.expectedInflation / 100;
@@ -299,7 +289,6 @@ document.addEventListener("DOMContentLoaded", () => {
     outputs.chartSubtitle.textContent = displayNominal
       ? `Dollars are NOT adjusted for inflation (assuming ${settings.expectedInflation}% annual inflation)`
       : "These dollars ARE adjusted for inflation";
-
     outputs.legacyBoxNote.textContent = `Values are in ${dollarType.toLowerCase()} dollars.`;
 
     const startAge =
@@ -309,10 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
       { length: settings.horizonYears },
       (_, i) => `Age ${startAge + i}`
     );
-
     const datasets = [];
-
-    // Process results to be nominal IF requested for chart display
     const processedResultsByYear = resultsByYearInput.map(
       (yearDataPoints, t) => {
         const cumulativeInflation = displayNominal
@@ -328,8 +314,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }));
       }
     );
-
-    // Legacy outcomes processing
     const processedLegacyOutcomes = legacyOutcomesInput.map((legacyReal) => {
       const cumulativeInflationEnd = displayNominal
         ? Math.pow(1 + expectedInflationRate, settings.horizonYears)
@@ -347,55 +331,52 @@ document.addEventListener("DOMContentLoaded", () => {
       legacyPercentiles[0.95]
     );
 
+    // --- Dataset Creation ---
+    // (This part defining the datasets array for 'showSources' or not remains the same as the previous correct version
+    // Ensure datasets are pushed in the visual order: LMP, Risk5th, RiskMedian-5th, Risk95th-Median, TotalMedianLine)
     if (settings.showSources) {
       const lmpDataSeries = [];
       const risk5thData = [],
         riskMedianData = [],
         risk95thData = [];
-
       processedResultsByYear.forEach((yearDataPoints) => {
         lmpDataSeries.push(
           yearDataPoints[0] ? yearDataPoints[0].lmpComponent : 0
-        ); // LMP is fixed for this year after nominal conversion
-
+        );
         const riskSpendingValues = yearDataPoints.map((dp) => dp.riskComponent);
         const p = calculatePercentiles(riskSpendingValues);
         risk5thData.push(p[0.05]);
         riskMedianData.push(p[0.5]);
         risk95thData.push(p[0.95]);
       });
-
       datasets.push({
         label: `LMP Guaranteed (${dollarType})`,
         data: lmpDataSeries,
-        backgroundColor: "rgba(75, 192, 192, 0.6)",
+        backgroundColor: "rgba(75, 192, 192, 0.7)",
         stack: "SpendingStack",
-        order: 3,
       });
       datasets.push({
         label: `Risk Portfolio (5th Perc. ${dollarType})`,
-        data: risk5thData.map((val) => Math.max(0, val)), // ensure non-negative for stacking diffs
-        backgroundColor: "rgba(255, 99, 132, 0.2)",
+        data: risk5thData.map((val) => Math.max(0, val)),
+        backgroundColor: "rgba(255, 99, 132, 0.5)",
         stack: "SpendingStack",
-        order: 2,
       });
       datasets.push({
         label: `Risk Portfolio (Median - 5th Perc. ${dollarType})`,
         data: riskMedianData.map((m, idx) => Math.max(0, m - risk5thData[idx])),
-        backgroundColor: "rgba(255, 159, 64, 0.5)",
+        backgroundColor: "rgba(255, 159, 64, 0.6)",
         stack: "SpendingStack",
-        order: 2,
       });
       datasets.push({
         label: `Risk Portfolio (95th - Median Perc. ${dollarType})`,
         data: risk95thData.map((m, idx) =>
           Math.max(0, m - riskMedianData[idx])
         ),
-        backgroundColor: "rgba(255, 205, 86, 0.5)",
+        backgroundColor: "rgba(255, 205, 86, 0.6)",
         stack: "SpendingStack",
-        order: 2,
       });
       datasets.push({
+        // This is the LINE dataset
         label: `Total Median Spending (${dollarType})`,
         data: lmpDataSeries.map((lmp, idx) =>
           Math.max(0, lmp + riskMedianData[idx])
@@ -404,15 +385,13 @@ document.addEventListener("DOMContentLoaded", () => {
         borderColor: "#3e6482",
         fill: false,
         tension: 0.1,
-        borderWidth: 2,
+        borderWidth: 2.5,
         pointRadius: 0,
-        order: 1,
+        order: 0,
       });
     } else {
-      // Not showing sources, show total spending range
       const medianData = [];
       const rangeData5th95th = [];
-
       processedResultsByYear.forEach((yearDataPoints) => {
         const totalSpendingValues = yearDataPoints.map(
           (dp) => dp.totalSpending
@@ -421,7 +400,6 @@ document.addEventListener("DOMContentLoaded", () => {
         medianData.push(percentiles[0.5]);
         rangeData5th95th.push([percentiles[0.05], percentiles[0.95]]);
       });
-
       datasets.push({
         label: `5th-95th Percentile Spending (${dollarType})`,
         data: rangeData5th95th,
@@ -433,6 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
         order: 2,
       });
       datasets.push({
+        // This is the LINE dataset
         label: `Median Spending (${dollarType})`,
         data: medianData,
         type: "line",
@@ -445,8 +424,9 @@ document.addEventListener("DOMContentLoaded", () => {
         order: 1,
       });
     }
+    // --- End of Dataset Creation ---
 
-    const currencySymbol = formatSimpleCurrency(0).charAt(0); // Get $ or other symbol
+    const currencySymbol = formatSimpleCurrency(0).charAt(0);
     const chartConfig = {
       type: "bar",
       data: { labels: chartLabels, datasets: datasets },
@@ -454,99 +434,128 @@ document.addEventListener("DOMContentLoaded", () => {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: {
-            title: { display: true, text: "Retirement Year / Age" },
-            stacked: settings.showSources,
-          },
-          y: {
-            title: {
-              display: true,
-              text: `${timeUnit} Spending (${currencySymbol}, ${dollarType})`,
-            },
-            beginAtZero: true,
-            ticks: {
-              callback: (value) =>
-                formatSimpleCurrency(value).replace(/\.\d+$/, ""),
-            },
-            stacked: settings.showSources,
-          },
+          /* ... existing scales ... */
         },
         plugins: {
           tooltip: {
             enabled: true,
             mode: "index",
             intersect: false,
+            itemSort: function (a, b) {
+              // Sort tooltip items
+              // We want "Total Median Spending" line to appear after "Total Stack" (if present)
+              // and before other bar segments when showSources is true.
+              // For other cases, default sort is fine.
+              if (settings.showSources) {
+                const labelA = a.dataset.label || "";
+                const labelB = b.dataset.label || "";
+
+                // "Total Median Spending" line dataset has a specific label
+                const medianLineLabel = `Total Median Spending (${dollarType})`;
+
+                if (labelA === medianLineLabel && labelB !== medianLineLabel)
+                  return -1; // A (median line) comes before B
+                if (labelB === medianLineLabel && labelA !== medianLineLabel)
+                  return 1; // B (median line) comes before A
+              }
+              return a.datasetIndex - b.datasetIndex; // Default sort by datasetIndex
+            },
             callbacks: {
-              label: function (context) {
-                let label = context.dataset.label || "";
-                if (label) label += ": ";
-                if (context.parsed.y !== null) {
-                  if (Array.isArray(context.raw) && context.raw.length === 2) {
-                    label += `${formatSimpleCurrency(
-                      context.raw[0]
-                    )} - ${formatSimpleCurrency(context.raw[1])}`;
-                  } else {
-                    label += formatSimpleCurrency(context.parsed.y);
-                  }
-                }
-                return label;
-              },
               title: function (tooltipItems) {
+                /* ... existing title callback ... */
+                if (!tooltipItems || tooltipItems.length === 0) return "";
                 const yearIndex = tooltipItems[0].dataIndex;
                 const age = startAge + yearIndex;
                 const birthDate = new Date(settings.userBirthdate);
-                // Calendar year calc needs to be careful if birth month/day > current month/day
                 let calendarYear = birthDate.getFullYear() + age;
                 if (
                   new Date().getMonth() < birthDate.getMonth() ||
                   (new Date().getMonth() === birthDate.getMonth() &&
                     new Date().getDate() < birthDate.getDate())
                 ) {
-                  calendarYear--; // If birthday hasn't occurred this year yet
+                  calendarYear--;
                 }
                 return `Age: ${age} (Approx. ${calendarYear})`;
               },
+              // Specific label/body callbacks will be added below conditionally
             },
           },
-          legend: { position: "top" },
+          legend: { position: "top", reverse: true },
         },
         interaction: { mode: "index", axis: "x", intersect: false },
       },
     };
 
-    // Tooltip adjustment for stacked bars to show total (if "show sources")
+    // Conditionally add/override tooltip label, beforeBody, afterBody callbacks
     if (settings.showSources) {
-      let tooltipItemsBeingProcessed = -1; // Helper for tooltip total
+      let tooltipTotalStackCalculatedForIndex = -1;
+      let currentTotalStackString = "";
+
+      chartConfig.options.plugins.tooltip.callbacks.beforeBody = function (
+        tooltipItems
+      ) {
+        const lines = [];
+        if (tooltipItems.length > 0) {
+          const dataIndex = tooltipItems[0].dataIndex;
+          // 1. Calculate and add "Total Stack"
+          if (tooltipTotalStackCalculatedForIndex !== dataIndex) {
+            let totalStack = 0;
+            const chart = this.chart;
+            chart.data.datasets.forEach((ds) => {
+              if (
+                ds.stack === "SpendingStack" &&
+                chart.isDatasetVisible(chart.data.datasets.indexOf(ds)) &&
+                ds.type !== "line"
+              ) {
+                const value = ds.data[dataIndex];
+                if (typeof value === "number") totalStack += value;
+              }
+            });
+            currentTotalStackString = `Total Stack: ${formatSimpleCurrency(
+              totalStack
+            )}`;
+            tooltipTotalStackCalculatedForIndex = dataIndex;
+          }
+          if (currentTotalStackString) {
+            lines.push(currentTotalStackString);
+          }
+
+          // 2. Find and add "Total Median Spending" line value if it's not already handled by itemSort/label
+          // This is tricky because beforeBody runs before individual label callbacks.
+          // The itemSort should handle the order of items passed to 'label'.
+          // We will rely on itemSort to position the median line correctly,
+          // and the label callback will format it.
+        }
+        return lines; // Only "Total Stack" is prepended here.
+      };
+
       chartConfig.options.plugins.tooltip.callbacks.label = function (context) {
         let label = context.dataset.label || "";
         if (label) label += ": ";
         label += formatSimpleCurrency(context.parsed.y);
+        return label;
+      };
 
-        if (
-          context.dataset.stack === "SpendingStack" &&
-          context.chart.isDatasetVisible(context.datasetIndex)
-        ) {
-          if (tooltipItemsBeingProcessed !== context.dataIndex) {
-            let total = 0;
-            context.chart.data.datasets.forEach((ds, i) => {
-              if (
-                ds.stack === "SpendingStack" &&
-                context.chart.isDatasetVisible(i)
-              ) {
-                const value = ds.data[context.dataIndex];
-                if (typeof value === "number") total += value;
-              }
-            });
-            tooltipItemsBeingProcessed = context.dataIndex;
-            return [label, `Total Stack: ${formatSimpleCurrency(total)}`];
+      chartConfig.options.plugins.tooltip.callbacks.afterBody = function () {
+        tooltipTotalStackCalculatedForIndex = -1; // Reset for next hover point
+        currentTotalStackString = "";
+        return [];
+      };
+    } else {
+      // Tooltip for non-stacked view
+      chartConfig.options.plugins.tooltip.callbacks.label = function (context) {
+        let label = context.dataset.label || "";
+        if (label) label += ": ";
+        if (context.parsed.y !== null) {
+          if (Array.isArray(context.raw) && context.raw.length === 2) {
+            label += `${formatSimpleCurrency(
+              context.raw[0]
+            )} - ${formatSimpleCurrency(context.raw[1])}`;
           } else {
-            return label; // Only return primary label for subsequent items in same stack/index
+            label += formatSimpleCurrency(context.parsed.y);
           }
         }
         return label;
-      };
-      chartConfig.options.plugins.tooltip.callbacks.afterBody = function () {
-        tooltipItemsBeingProcessed = -1;
       };
     }
 
@@ -567,10 +576,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const displayNominal = settings.displayNominal;
     const headerKeys = Object.keys(dataToExport[0]);
     let header = headerKeys.join(",");
+    let headerModifiedForNominal = false; // Flag to modify header only once for nominal export
+    let headerModifiedForReal = false; // Flag to modify header only once for real export
 
     const rows = dataToExport.map((row) => {
       if (displayNominal) {
-        // Convert relevant currency columns to nominal for export
         const nominalRow = { ...row };
         nominalRow.startBalanceReal =
           row.startBalanceReal * row.cumulativeInflation;
@@ -582,13 +592,26 @@ document.addEventListener("DOMContentLoaded", () => {
           row.totalSpendingReal * row.cumulativeInflation;
         nominalRow.endBalanceReal =
           row.endBalanceReal * row.cumulativeInflation;
-        // Rename headers for nominal export
-        if (header.includes("Real")) {
-          // do this only once
+
+        if (!headerModifiedForNominal) {
           header = header.replace(/Real/g, "Nominal");
+          // Ensure specific common headers are updated if they exist
+          header = header
+            .replace("startBalanceNominal", "startBalanceNominal")
+            .replace("lmpPaymentNominal", "lmpPaymentNominal")
+            .replace("riskWithdrawalNominal", "riskWithdrawalNominal")
+            .replace("totalSpendingNominal", "totalSpendingNominal")
+            .replace("endBalanceNominal", "endBalanceNominal");
+          headerModifiedForNominal = true;
+          headerModifiedForReal = false; // Reset other flag
         }
         return Object.values(nominalRow).join(",");
       } else {
+        if (!headerModifiedForReal) {
+          header = header.replace(/Nominal/g, "Real");
+          headerModifiedForReal = true;
+          headerModifiedForNominal = false; // Reset other flag
+        }
         return Object.values(row).join(",");
       }
     });
@@ -607,15 +630,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // --- Main Simulation Orchestration ---
-  let lastSimResults = null; // Store results to avoid re-simulating for display-only changes
+  let lastSimResults = null;
 
   function runSimulation(forceResimulate = false) {
-    const stockPct = parseFloatInput(inputs.stockPct);
-    const bondPct = parseFloatInput(inputs.bondPct);
-    if (Math.abs(stockPct + bondPct - 100) > 0.1) {
+    const stockPctVal = parseFloatInput(inputs.stockPct);
+    const bondPctVal = parseFloatInput(inputs.bondPct);
+    if (Math.abs(stockPctVal + bondPctVal - 100) > 0.1) {
       if (
         !confirm(
-          `Stock % (${stockPct}%) + Bond % (${bondPct}%) does not equal 100%. Continue anyway?`
+          `Stock % (${stockPctVal}%) + Bond % (${bondPctVal}%) does not equal 100%. Continue anyway?`
         )
       ) {
         return;
@@ -624,41 +647,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const settings = {
       userBirthdate: inputs.userBirthdate.value,
-      expectedInflation: parseFloatInput(inputs.expectedInflation, 2.5), // NEW
+      expectedInflation: parseFloatInput(inputs.expectedInflation, 2.5),
       lmpAmount: parseFloatInput(inputs.lmpAmount, 0),
       lmpRate: parseFloatInput(inputs.lmpRate, 0),
       lmpYears: parseIntInput(inputs.lmpYears, 30),
       startBalance: parseFloatInput(inputs.startBalance, 0),
       horizonYears: parseIntInput(inputs.horizonYears, 30),
-      stockPct: stockPct,
-      bondPct: bondPct,
+      stockPct: stockPctVal,
+      bondPct: bondPctVal,
       stockReturn: parseFloatInput(inputs.stockReturn, 7),
       stockSigma: parseFloatInput(inputs.stockSigma, 15),
       bondReturn: parseFloatInput(inputs.bondReturn, 2.5),
       bondSigma: parseFloatInput(inputs.bondSigma, 5),
       legacyTarget: parseFloatInput(inputs.legacyTarget, 0),
       nSims: parseIntInput(inputs.nSims, 1000),
-      maxTotalSpending: inputs.maxTotalSpending.value
-        ? parseFloatInput(inputs.maxTotalSpending)
-        : null, // UPDATED
+      maxTotalSpendingValue: inputs.maxTotalSpendingValue.value
+        ? parseFloatInput(inputs.maxTotalSpendingValue)
+        : null,
+      maxTotalSpendingPeriod: inputs.maxTotalSpendingPeriod.value,
       showSources: inputs.showSources.checked,
       displayMonthly: inputs.displayMonthly.checked,
-      displayNominal: inputs.displayNominal.checked, // NEW
+      displayNominal: inputs.displayNominal.checked,
       currentAge:
         new Date().getFullYear() -
         new Date(inputs.userBirthdate.value).getFullYear(),
     };
     currentChartSettingsForRedraw = settings;
 
-    // Only re-run Monte Carlo if core financial parameters changed or forced
     if (forceResimulate || !lastSimResults) {
       runSimButton.disabled = true;
       runSimButton.textContent = "Simulating...";
 
       setTimeout(() => {
-        // UI update before heavy computation
         const { resultsByYear, legacyOutcomesReal } = runMonteCarlo(settings);
-        lastSimResults = { resultsByYear, legacyOutcomesReal }; // Store REAL results
+        lastSimResults = { resultsByYear, legacyOutcomesReal };
         updateChart(
           lastSimResults.resultsByYear,
           lastSimResults.legacyOutcomesReal,
@@ -669,7 +691,6 @@ document.addEventListener("DOMContentLoaded", () => {
         runSimButton.textContent = "Run Simulation";
       }, 10);
     } else {
-      // If only display settings changed (like nominal/monthly/show_sources), just update chart
       updateChart(
         lastSimResults.resultsByYear,
         lastSimResults.legacyOutcomesReal,
@@ -679,7 +700,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // --- Event Listeners ---
-  runSimButton.addEventListener("click", () => runSimulation(true)); // Force re-simulation on button click
+  runSimButton.addEventListener("click", () => runSimulation(true));
 
   exportCsvButton.addEventListener("click", () => {
     if (allSimData.length > 0 && currentChartSettingsForRedraw) {
@@ -693,34 +714,38 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Listeners for toggles that only affect display (don't need full re-simulation if results exist)
   [inputs.showSources, inputs.displayMonthly, inputs.displayNominal].forEach(
-    (input) => {
-      input.addEventListener("change", () => {
-        if (lastSimResults) {
-          // If a simulation has been run
-          runSimulation(false); // Re-run with false to only update chart
-        }
-      });
+    (inputElement) => {
+      if (inputElement) {
+        inputElement.addEventListener("change", () => {
+          if (lastSimResults) {
+            runSimulation(false);
+          }
+        });
+      }
     }
   );
 
-  inputs.stockPct.addEventListener("change", () => {
-    const stockVal = parseFloatInput(inputs.stockPct, 60);
-    if (stockVal >= 0 && stockVal <= 100) {
-      inputs.bondPct.value = 100 - stockVal;
-    }
-    lastSimResults = null; // Invalidate cache if input changes
-  });
-  inputs.bondPct.addEventListener("change", () => {
-    const bondVal = parseFloatInput(inputs.bondPct, 40);
-    if (bondVal >= 0 && bondVal <= 100) {
-      inputs.stockPct.value = 100 - bondVal;
-    }
-    lastSimResults = null; // Invalidate cache
-  });
+  if (inputs.stockPct) {
+    inputs.stockPct.addEventListener("change", () => {
+      const stockVal = parseFloatInput(inputs.stockPct, 60);
+      if (stockVal >= 0 && stockVal <= 100 && inputs.bondPct) {
+        inputs.bondPct.value = (100 - stockVal).toString();
+      }
+      lastSimResults = null;
+    });
+  }
 
-  // Invalidate lastSimResults if any core input changes
+  if (inputs.bondPct) {
+    inputs.bondPct.addEventListener("change", () => {
+      const bondVal = parseFloatInput(inputs.bondPct, 40);
+      if (bondVal >= 0 && bondVal <= 100 && inputs.stockPct) {
+        inputs.stockPct.value = (100 - bondVal).toString();
+      }
+      lastSimResults = null;
+    });
+  }
+
   const coreInputsForResimulation = [
     inputs.userBirthdate,
     inputs.expectedInflation,
@@ -728,18 +753,26 @@ document.addEventListener("DOMContentLoaded", () => {
     inputs.lmpRate,
     inputs.lmpYears,
     inputs.startBalance,
-    inputs.horizonYears /* stock/bond % handled above */,
+    inputs.horizonYears,
     inputs.stockReturn,
     inputs.stockSigma,
     inputs.bondReturn,
     inputs.bondSigma,
     inputs.legacyTarget,
     inputs.nSims,
-    inputs.maxTotalSpending,
+    inputs.maxTotalSpendingValue,
+    inputs.maxTotalSpendingPeriod,
   ];
-  coreInputsForResimulation.forEach((input) => {
-    input.addEventListener("change", () => {
-      lastSimResults = null;
-    });
+  coreInputsForResimulation.forEach((inputElement) => {
+    if (inputElement) {
+      inputElement.addEventListener("change", () => {
+        lastSimResults = null;
+      });
+    } else {
+      // This else block can help identify which input might be missing during development
+      // For production, you might remove it or log more discreetly.
+      // console.warn("A core input element expected for resimulation trigger was not found.");
+    }
   });
 });
+//

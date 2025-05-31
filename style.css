@@ -143,6 +143,37 @@ input[type="text"]:focus {
   border-color: var(--color-border-input-focus);
   box-shadow: 0 0 0 0.25rem rgba(var(--color-accent-rgb, 0, 123, 255), 0.25); /* Accent focus ring */
 }
+
+.input-group-spending-cap {
+  display: flex;
+  align-items: center; /* Vertically align items if they have different heights */
+  gap: var(--spacing-sm); /* Space between input and select */
+  margin-bottom: var(--spacing-md); /* Keep consistent bottom margin */
+}
+
+.input-group-spending-cap input[type="number"] {
+  flex-grow: 1; /* Allow input to take available space */
+  margin-bottom: 0; /* Remove bottom margin since group has it */
+}
+
+.input-group-spending-cap select {
+  padding: 0.625rem 0.75rem; /* Match input padding */
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--border-radius-md);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-size: 0.9375rem; /* Match input font size */
+  height: calc(
+    1.6em + (0.625rem * 2) + (1px * 2)
+  ); /* Approx match input height, adjust if needed */
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.input-group-spending-cap select:focus {
+  outline: 0;
+  border-color: var(--color-border-input-focus);
+  box-shadow: 0 0 0 0.25rem rgba(var(--color-accent-rgb, 0, 123, 255), 0.25);
+}
+
 /* Custom property for accent color RGB values for box-shadow */
 :root {
   --color-accent-rgb: 0, 123, 255; /* Default Bootstrap blue RGB */
