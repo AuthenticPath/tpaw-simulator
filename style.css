@@ -1,233 +1,392 @@
+/* styles.css */
+
+/* --- CSS Custom Properties (Theme Variables) --- */
+:root {
+  --font-primary: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol";
+  --font-secondary: "SF Mono", "Roboto Mono", Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace; /* For data/code if needed */
+
+  --color-bg-body: #f4f6f8; /* Light neutral background */
+  --color-bg-card: #ffffff; /* White for cards/containers */
+
+  --color-text-primary: #212529; /* Dark gray for main text */
+  --color-text-secondary: #5a6570; /* Medium gray for labels, subtitles */
+  --color-text-muted: #86909c; /* Lighter gray for subtle text */
+
+  --color-border: #dee2e6; /* Light border color */
+  --color-border-input: #ced4da; /* Input border */
+  --color-border-input-focus: #86b7fe; /* Focus border for inputs (matches Bootstrap) */
+
+  --color-accent: #007bff; /* Primary accent blue (Bootstrap primary) */
+  --color-accent-dark: #0056b3; /* Darker accent for hover states */
+  --color-accent-light: #cfe2ff; /* Lighter accent for backgrounds or highlights */
+
+  --color-success: #198754; /* Green for success messages/buttons */
+  --color-success-dark: #146c43;
+  --color-warning: #ffc107;
+  --color-danger: #dc3545;
+
+  --border-radius-sm: 0.25rem; /* 4px */
+  --border-radius-md: 0.375rem; /* 6px */
+  --border-radius-lg: 0.5rem; /* 8px */
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07),
+    0 2px 4px -1px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-md: 1rem; /* 16px */
+  --spacing-lg: 1.5rem; /* 24px */
+  --spacing-xl: 2rem; /* 32px */
+}
+
+/* --- Global Styles & Resets --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  font-family: var(--font-primary);
   margin: 0;
-  background-color: #f4f7f6;
-  color: #333;
+  background-color: var(--color-bg-body);
+  color: var(--color-text-primary);
+  font-size: 1rem; /* Base font size: 16px */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   display: flex;
   justify-content: center;
   min-height: 100vh;
-  font-size: 14px;
 }
 
+/* --- Main App Layout --- */
 .app {
   display: grid;
-  grid-template-columns: 320px 1fr 280px; /* Left sidebar, Main content, Right sidebar */
-  gap: 20px;
+  grid-template-columns: 340px 1fr 300px; /* Left sidebar, Main content, Right sidebar */
+  gap: var(--spacing-lg);
   width: 100%;
-  max-width: 1600px;
-  padding: 20px;
-  box-sizing: border-box;
+  max-width: 1800px; /* Allow for wider screens */
+  padding: var(--spacing-lg);
 }
 
+/* --- Sidebar Styles --- */
 .sidebar {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  height: fit-content;
-  max-height: calc(100vh - 40px); /* Account for padding */
-  overflow-y: auto;
+  background-color: var(--color-bg-card);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  height: fit-content; /* Adjusts to content */
+  max-height: calc(100vh - (2 * var(--spacing-lg))); /* Prevent overflow */
+  overflow-y: auto; /* Scroll if content exceeds max-height */
 }
 
 .sidebar h1 {
-  font-size: 1.5em;
+  /* Main app title in left sidebar */
+  font-size: 1.75rem; /* 28px */
+  font-weight: 600;
   margin-top: 0;
-  color: #2c3e50;
+  margin-bottom: var(--spacing-xl);
+  color: var(--color-text-primary);
   text-align: center;
-  margin-bottom: 20px;
+  line-height: 1.2;
 }
 
 .sidebar h2 {
-  font-size: 1.1em;
-  margin-top: 20px;
-  margin-bottom: 10px;
-  color: #34495e;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
+  /* Section titles in sidebars */
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--spacing-sm);
 }
 .sidebar section:first-of-type h2 {
-  margin-top: 0;
+  margin-top: 0; /* No top margin for the first section H2 */
 }
 
+/* --- Form Elements --- */
 label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: var(--spacing-xs);
   font-weight: 500;
-  color: #555;
+  font-size: 0.875rem; /* 14px */
+  color: var(--color-text-secondary);
 }
 
 input[type="number"],
-input[type="date"] {
-  width: calc(100% - 12px); /* Account for padding */
-  padding: 8px 6px;
-  margin-bottom: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-size: 0.95em;
+input[type="date"],
+input[type="text"] /* If you add text inputs */ {
+  width: 100%;
+  padding: 0.625rem 0.75rem; /* 10px 12px */
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--border-radius-md);
+  background-color: var(
+    --color-bg-card
+  ); /* Ensure it's white if parent changes */
+  color: var(--color-text-primary);
+  font-size: 0.9375rem; /* 15px */
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 input[type="number"]:focus,
-input[type="date"]:focus {
-  outline: none;
-  border-color: #79a5c5; /* Purple-blue accent */
-  box-shadow: 0 0 0 2px rgba(121, 165, 197, 0.2);
+input[type="date"]:focus,
+input[type="text"]:focus {
+  outline: 0;
+  border-color: var(--color-border-input-focus);
+  box-shadow: 0 0 0 0.25rem rgba(var(--color-accent-rgb, 0, 123, 255), 0.25); /* Accent focus ring */
+}
+/* Custom property for accent color RGB values for box-shadow */
+:root {
+  --color-accent-rgb: 0, 123, 255; /* Default Bootstrap blue RGB */
+}
+
+/* Buttons */
+button {
+  padding: 0.625rem 1.25rem; /* 10px 20px */
+  border-radius: var(--border-radius-md);
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
+  border: 1px solid transparent;
+  line-height: 1.5;
 }
 
 button#run-sim {
-  background-color: #79a5c5; /* Purple-blue */
+  background-color: var(--color-accent);
   color: white;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1em;
-  font-weight: 500;
   width: 100%;
-  margin-top: 20px;
-  transition: background-color 0.2s ease;
+  margin-top: var(--spacing-lg);
+  font-size: 1rem; /* 16px */
+  padding: 0.75rem 1.25rem; /* 12px 20px */
 }
-
 button#run-sim:hover {
-  background-color: #5f87a3; /* Darker purple-blue */
+  background-color: var(--color-accent-dark);
+}
+button#run-sim:disabled {
+  background-color: #a0c7f0; /* Lighter, disabled accent */
+  cursor: not-allowed;
 }
 
+/* --- Main Results Area --- */
 .results-container {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background-color: var(--color-bg-card);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
 }
 
 .results-header {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
 }
-.results-header h1 {
-  font-size: 1.6em;
-  margin: 0 0 5px 0;
-  color: #2c3e50;
+.results-header h1#chart-main-title {
+  /* Chart title */
+  font-size: 1.5rem; /* 24px */
+  font-weight: 600;
+  margin: 0 0 var(--spacing-xs) 0;
+  color: var(--color-text-primary);
 }
-.results-header p {
-  margin: 0 0 15px 0;
-  color: #777;
+.results-header p#chart-subtitle {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem; /* 15px */
 }
+
+/* Toggles (Checkboxes) */
 .toggles {
   display: flex;
-  gap: 20px;
-  margin-bottom: 10px;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
   flex-wrap: wrap;
 }
 .toggles label {
   display: flex;
   align-items: center;
-  font-size: 0.9em;
+  font-size: 0.875rem; /* 14px */
   font-weight: normal;
+  color: var(--color-text-secondary);
+  cursor: pointer;
 }
 .toggles input[type="checkbox"] {
-  margin-right: 5px;
+  margin-right: var(--spacing-sm);
+  width: 1.15em;
+  height: 1.15em;
+  cursor: pointer;
+  accent-color: var(--color-accent); /* Modern way to style checkbox color */
 }
 
+/* Chart Area */
 .chart-wrapper {
-  flex-grow: 1;
-  position: relative; /* For tooltip positioning */
-  min-height: 400px; /* Ensure chart has space */
+  flex-grow: 1; /* Allows chart to take available vertical space */
+  position: relative;
+  min-height: 450px; /* Ensure chart has enough space */
+  margin-bottom: var(--spacing-md);
 }
-
 #spending-chart {
   width: 100%;
   height: 100%;
 }
 
+.info-text {
+  /* Helper text, like under inputs or chart */
+  font-size: 0.8125rem; /* 13px */
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+.info-text.centered {
+  text-align: center;
+}
+
+/* Tooltip (from Chart.js, slightly enhanced) */
 .tooltip {
-  position: absolute;
-  background-color: rgba(0, 0, 0, 0.8);
+  /* Existing class from your HTML for potential direct styling */
+  /* Chart.js handles its own tooltip styling via its options, 
+       but you can add global defaults here if needed.
+       The JS already positions it. */
+  background-color: rgba(
+    33,
+    37,
+    41,
+    0.9
+  ); /* Darker, more standard tooltip bg */
   color: white;
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 0.85em;
-  pointer-events: none; /* So it doesn't interfere with chart events */
-  white-space: pre-line; /* To respect newlines in content */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.875rem;
+  pointer-events: none;
+  white-space: pre-line;
+  box-shadow: var(--shadow-sm);
   z-index: 100;
 }
 
+/* --- Right Sidebar Specifics --- */
 .sidebar-right {
-  /* Styles from .sidebar apply */
+  /* General .sidebar styles already apply */
 }
-
 #legacy-box p,
 #summary-stats p {
-  margin: 8px 0;
-  font-size: 0.95em;
+  margin: var(--spacing-sm) 0;
+  font-size: 0.9375rem; /* 15px */
+  color: var(--color-text-secondary);
+  display: flex;
+  justify-content: space-between; /* Aligns label and value */
 }
 #legacy-box span,
 #summary-stats span {
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
+  text-align: right;
 }
 
+/* Export Buttons */
 .export-buttons {
-  margin-top: 20px;
+  margin-top: var(--spacing-md);
   text-align: center;
 }
-.export-buttons button {
-  background-color: #5cb85c;
+button#export-csv {
+  background-color: var(--color-success);
   color: white;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.9em;
-  transition: background-color 0.2s ease;
+  border-color: var(--color-success);
 }
-.export-buttons button:hover {
-  background-color: #4cae4c;
+button#export-csv:hover {
+  background-color: var(--color-success-dark);
+  border-color: var(--color-success-dark);
 }
 
-.info-text {
-  font-size: 0.85em;
-  color: #777;
-  margin-top: 5px;
-  margin-bottom: 10px;
-}
+/* --- Responsive Adjustments --- */
 
-/* Responsive adjustments */
+/* Tablet and larger phones */
 @media (max-width: 1200px) {
   .app {
-    grid-template-columns: 300px 1fr; /* Stack sidebars or combine them */
-    grid-template-rows: auto auto;
+    grid-template-columns: 320px 1fr; /* Left sidebar, Main content */
+    grid-template-rows: auto auto; /* Allow rows to size independently */
   }
   .sidebar-right {
-    grid-column: 1 / 2; /* Move right sidebar below left */
+    grid-column: 1 / -1; /* Span full width below the first row items */
     grid-row: 2 / 3;
-    margin-top: 20px; /* Add some space */
+    margin-top: 0; /* No extra top margin if it's stacked like this */
+    /* If sidebar-left and results-container are in row 1, right sidebar is row 2 */
   }
   .results-container {
-    grid-column: 2 / 3; /* Main content takes the second column */
-    grid-row: 1 / 3; /* Span both rows if right sidebar is below left */
+    grid-column: 2 / 3; /* Main content takes the second column in the first row */
+    grid-row: 1 / 2;
+  }
+  /* If viewport is narrow enough for sidebar-left to be an issue, stack all */
+  @media (max-width: 992px) {
+    /* Typical tablet breakpoint */
+    .app {
+      grid-template-columns: 1fr; /* Single column */
+    }
+    .sidebar,
+    .sidebar-right,
+    .results-container {
+      grid-column: 1 / -1; /* Full width */
+      margin-bottom: var(--spacing-lg); /* Add space between stacked elements */
+    }
+    .sidebar-right {
+      margin-top: 0; /* Reset as it's part of the single column flow now */
+    }
+    .sidebar {
+      max-height: none; /* Allow sidebar to grow in single column */
+    }
   }
 }
 
+/* Smaller devices / Mobile */
 @media (max-width: 768px) {
   .app {
-    grid-template-columns: 1fr; /* Single column */
+    grid-template-columns: 1fr; /* Single column ensured */
+    padding: var(--spacing-md);
+    gap: var(--spacing-md);
   }
   .sidebar,
   .sidebar-right,
   .results-container {
     grid-column: 1 / -1; /* Full width */
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md); /* Space between stacked elements */
   }
   .sidebar-right {
-    margin-top: 20px;
+    margin-top: 0;
   }
-  .results-header h1 {
-    font-size: 1.4em;
-  }
+  .sidebar h1 {
+    font-size: 1.5rem;
+  } /* 24px */
+  .sidebar h2 {
+    font-size: 1rem;
+  } /* 16px */
+  .results-header h1#chart-main-title {
+    font-size: 1.25rem;
+  } /* 20px */
+
   .toggles {
     flex-direction: column;
     align-items: flex-start;
-    gap: 5px;
+    gap: var(--spacing-sm);
+  }
+  button {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+  button#run-sim {
+    font-size: 0.9375rem;
+    padding: 0.625rem 1rem;
+  }
+  .chart-wrapper {
+    min-height: 300px;
   }
 }

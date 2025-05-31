@@ -16,12 +16,16 @@
           <h2>Global Settings</h2>
           <label for="user-birthdate">Your Birthdate:</label>
           <input type="date" id="user-birthdate" value="1970-01-01" />
-          <!-- Partner age/birthdate can be added if more detailed X-axis labeling is needed -->
+
+          <!-- NEW: Expected Annual Inflation -->
+          <label for="expected-inflation">Expected Annual Inflation (%):</label>
+          <input type="number" id="expected-inflation" value="2.5" step="0.1" />
         </section>
 
         <section id="inputs-lmp">
           <h2>LMP (TIPS Ladder)</h2>
-          <label for="lmp-amount">Annual Guaranteed Spending ($):</label>
+          <label for="lmp-amount">Annual Guaranteed Spending (real $):</label>
+          <!-- Clarified real $ -->
           <input type="number" id="lmp-amount" value="10000" step="100" />
 
           <label for="lmp-rate">Real Interest Rate (%):</label>
@@ -75,16 +79,20 @@
           <label for="bond-sigma">Bond Volatility (Std. Dev. %):</label>
           <input type="number" id="bond-sigma" value="5.0" step="0.1" />
 
-          <label for="legacy-target">Target Legacy ($):</label>
+          <label for="legacy-target"
+            >Target Legacy (real $ at end of horizon):</label
+          >
+          <!-- Clarified real $ -->
           <input type="number" id="legacy-target" value="0" step="1000" />
 
           <label for="n-sims">Monte Carlo Simulations:</label>
           <input type="number" id="n-sims" value="1000" step="100" />
 
-          <label for="max-spending"
-            >Max Annual Spending Cap (from Risk Portfolio, optional, $):</label
+          <!-- UPDATED: Max Spending Cap -->
+          <label for="max-total-spending"
+            >Max Annual Total Spending (optional, real $ at year 0):</label
           >
-          <input type="number" id="max-spending" />
+          <input type="number" id="max-total-spending" />
         </section>
 
         <button id="run-sim">Run Simulation</button>
@@ -97,20 +105,25 @@
           <div class="toggles">
             <label>
               <input type="checkbox" id="show-sources" /> Show funding sources
-              (LMP vs. Risk Portfolio)
             </label>
             <label>
               <input type="checkbox" id="display-monthly" checked /> Display
               Monthly Spending
+            </label>
+            <!-- NEW: Display Nominal Toggle -->
+            <label>
+              <input type="checkbox" id="display-nominal" /> Display in Nominal
+              Dollars
             </label>
           </div>
         </header>
 
         <div class="chart-wrapper">
           <canvas id="spending-chart"></canvas>
+          <!-- Tooltip div was here, but Chart.js creates its own. Keeping it just in case, but styled via Chart.js options mostly -->
           <div id="chart-tooltip" class="tooltip" style="display: none"></div>
         </div>
-        <p class="info-text" style="text-align: center">
+        <p class="info-text centered">
           Hover over bars for details. Use scroll wheel or pinch to zoom chart
           (if supported).
         </p>
@@ -126,6 +139,9 @@
           <p>95th Percentile: <span id="legacy-95th">$---,---</span></p>
           <p>50th Percentile: <span id="legacy-50th">$---,---</span></p>
           <p>5th Percentile: <span id="legacy-5th">$---,---</span></p>
+          <small id="legacy-box-note"
+            >(Adjusted for inflation if "Nominal" is not checked)</small
+          >
         </section>
         <section id="summary-stats">
           <h2>Initial Calculation Summary</h2>
@@ -135,11 +151,10 @@
             <span id="summary-risk-start">$---,---</span>
           </p>
           <p>
-            Base Annual Risk Withdrawal (W₀):
+            Base Annual Risk Withdrawal (W₀, real):
             <span id="summary-w0">$---,---</span>
           </p>
         </section>
-        <!-- Tasks box can be added here if specific tasks are defined -->
       </aside>
     </div>
 
